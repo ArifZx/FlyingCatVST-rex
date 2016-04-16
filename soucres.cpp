@@ -1,7 +1,3 @@
-/*
-* Create by Arif Budiman
-*
-*/
 #include<GL/glut.h>
 #include<stdlib.h>
 #include<iostream>
@@ -20,10 +16,37 @@ using namespace std;
 #define MAX_CAT_WING_ANGLE 45
 #define MIN_CAT_WING_ANGLE -15
 
-float frame = 500;
+#define MAX_TREX_JAW_ANGLE 0
+#define MIN_TREX_JAW_ANGLE -42
+
+#define MAX_TREX_NECKLE_ANGLE 20
+#define MIN_TREX_NECKLE_ANGLE -20
+
+#define MAX_TREX_UPPER_LEG_ANGLE 60
+#define MIN_TREX_UPPER_LEG_ANGLE -25
+
+#define MAX_TREX_FOOT_ANGLE 30
+#define MIN_TREX_FOOT_ANGLE -26
+
+#define MAX_TREX_LOWER_LEG_ANGLE -30
+#define MIN_TREX_LOWER_LEG_ANGLE -90
+
+#define MAX_TREX_TAIL_Z_ANGLE 5
+#define MIN_TREX_TAIL_Z_ANGLE -5
+
+#define MAX_TREX_TAIL_Y_ANGLE 25
+#define MIN_TREX_TAIL_Y_ANGLE -25
+
+#define MAX_TREX_SHAKE 0.1
+#define MIN_TREX_SHAKE 0.0
+
+float frame = 250,
+halfFrame = frame/2;
 char solid_part = 1;
 
 float xt = 0.0f, yt = 0.0f, zt = 0.0f, xr = 0.0f, yr = 0.0f, zr = 0.0f, xrm = 0.0f, yrm = 0.0f, zrm = 0.0f, xAngle = 0.0f, yAngle = 0.0f, zAngle = 0.0f;
+
+// Cat attribute
 
 float catTailAngle = 0.0f, 
 catFootAngle = 0.0, 
@@ -37,6 +60,32 @@ catTailRate = (MAX_CAT_TAIL_ANGLE - MIN_CAT_TAIL_ANGLE) / (frame * 8),
 catWingRate = (MAX_CAT_WING_ANGLE - MIN_CAT_WING_ANGLE) / (frame);
 
 bool reverseCatMove = false;
+
+
+// T-rex atribute
+
+float	tRexLeftUpperLegAngle = 17, tRexRightUpperLegAngle = 17,
+tRexLeftLowerLegAngle = -60, tRexRightLowerLegAngle = -60,
+tRexRightFootAngle = -10, tRexLeftFootAngle = -10,
+tRexChestAngle = 8, tRexNeckleAngle = 8, 
+tRexUpperHandAngle = 8, tRexLowerHandAngle = 8,
+tRexHeadAngleX = 0.0, tRexHeadAngleY = 0.0, tRexHeadAngleZ = -25.0,
+tRexJawAngle = 0.0, tRexTailAngleZ = 0.0, tRexTailAnngleY = 0.0,
+tRexShake = 0.05;
+
+float	tRexJawRate = (MAX_TREX_JAW_ANGLE - MIN_TREX_JAW_ANGLE) / frame,
+tRexNeckleRate = (MAX_TREX_NECKLE_ANGLE - MIN_TREX_NECKLE_ANGLE) / frame,
+tRexUpperLegRate = 1.5 * (MAX_TREX_UPPER_LEG_ANGLE - MIN_TREX_UPPER_LEG_ANGLE) / frame,
+tRexLowerLegRate = 1.5 * (MAX_TREX_LOWER_LEG_ANGLE - MIN_TREX_LOWER_LEG_ANGLE) / frame,
+tRexFootRate = (MAX_TREX_FOOT_ANGLE - MIN_TREX_FOOT_ANGLE) / frame,
+tRexTailYRate = (MAX_TREX_TAIL_Y_ANGLE - MIN_TREX_TAIL_Y_ANGLE) / (frame * 10),
+tRexTailZRate = (MAX_TREX_TAIL_Z_ANGLE - MIN_TREX_TAIL_Z_ANGLE) / (frame * 10),
+tRexShakeRate = (MAX_TREX_SHAKE - MIN_TREX_SHAKE) / (frame);
+
+bool reverseAnimTrex = false,
+animTrexLeftLeg = false,
+animTrexreverseJaw = false,
+animReverseTrexShake = false;
 
 /* start of material definitions */
 GLfloat mat_specular[] =
@@ -86,7 +135,7 @@ GLfloat mat_shininess5[] =
 
 /* end of material definitions */
 
-void clamp360(float *data)
+void clampf360(float *data)
 {
 	if (*data >= 360.0f)
 	{
@@ -95,6 +144,18 @@ void clamp360(float *data)
 	else if (*data <= -360.0f)
 	{
 		*data = *data + 360.0f;
+	}
+}
+
+void clampf(float *data, float *maxData, float *minData)
+{
+	if (*data <= *minData)
+	{
+		*data = *minData + 0.0f;
+	}
+	else if (*data >= *maxData)
+	{
+		*data = *maxData + 0.0f;
 	}
 }
 
@@ -370,6 +431,201 @@ void drawCat(char solid)
 	glPopMatrix();
 }
 
+void drawTrexFoot(char solid)
+{
+	Box(0.8, 0.2, 0.5, solid);
+}
+
+void drawTrexLowerLeg(char solid)
+{
+	Box(0.4, 1.0, 0.5, solid);
+}
+
+void drawTrexUpperLeg(char solid)
+{
+	Box(1.2, 1.0, 0.5, solid);
+	glTranslatef(-0.55, -0.5, 0.0);
+	glRotatef(-30, 0.0f, 0.0f, 1.0f);
+	Box(0.5, 0.65, 0.5, solid);
+	glTranslatef(0.0, -0.1, 0.0);
+}
+
+void drawTrexLeg(char solid, bool isLeft)
+{
+	if (isLeft) 
+		glRotatef(tRexLeftUpperLegAngle, 0.0f, 0.0f, 1.0f);
+	else 
+		glRotatef(tRexRightUpperLegAngle, 0.0f, 0.0f, 1.0f);
+	
+	drawTrexUpperLeg(solid);
+	
+	glPushMatrix();
+	glRotatef(60, 0.0f, 0.0f, 1.0f);
+	
+	if(isLeft) 
+		glRotatef(tRexLeftLowerLegAngle, 0.0f, 0.0f, 1.0f);
+	else 
+		glRotatef(tRexRightLowerLegAngle, 0.0f, 0.0f, 1.0f);
+	
+	glTranslatef(0.0, -0.4, 0.0);
+	drawTrexLowerLeg(solid);
+
+	glTranslatef(0.0, -0.4, 0.0);
+
+	glPushMatrix();
+
+	if (isLeft)
+		glRotatef(tRexLeftFootAngle, 0.0f, 0.0f, 1.0f);
+	else
+		glRotatef(tRexRightFootAngle, 0.0f, 0.0f, 1.0f);
+
+	glTranslatef(0.2f, 0.0f, 0.0f);
+	drawTrexFoot(solid);
+
+	glPopMatrix();
+
+	glPopMatrix();
+}
+
+void drawTrexJaw(char solid)
+{
+	Box(1.25f, 0.5f, 1.0f, solid);
+	glTranslatef(-0.7f, -0.5f, 0.0f);
+	glRotatef(tRexJawAngle, 0.0f, 0.0f, 1.0f);
+	glTranslatef(0.5f, 0.15f, 0.0f);
+	Box(1.2f, 0.3f, 0.7f, solid);
+}
+
+void drawTrexHead(char solid)
+{
+	glRotatef(tRexHeadAngleX, 1, 0, 0);
+	glRotatef(tRexHeadAngleY, 0, 1, 0);
+	glRotatef(tRexHeadAngleZ, 0, 0, 1);
+	glTranslatef(0.6, 0.0, 0.0);
+	Box(1.4, 1.25, 1.25, solid);
+
+	glPushMatrix();// jaw
+	glTranslatef(1.3f, 0.0f, 0.0f);
+	drawTrexJaw(solid);
+	glPopMatrix();
+}
+
+void drawTrexNeckle(char solid)
+{
+	glTranslatef(0.7, 0.0, 0.0);
+	Box(1.4, 1.2, 1.2, solid);
+}
+
+void drawTrexChest(char solid)
+{
+	glTranslatef(0.5, 0.0, 0.0);
+	Box(1.4, 1.4, 1.4, solid);
+}
+
+void drawTrexHand(char solid)
+{
+	glRotatef(tRexUpperHandAngle, 0.0f, 0.0f, 1.0f);
+	Box(0.3, 0.6, 0.3, solid);
+
+	glPushMatrix();
+	glTranslatef(0.1, -0.1, 0.0);
+	glRotatef(tRexLowerHandAngle, 0, 0, 1);
+	glTranslatef(0.0, -0.2, 0.0);
+	Box(0.15, 0.3, 0.3, solid);
+	glPopMatrix();
+}
+
+void drawTrexUpperBody(char solid)
+{
+	glRotatef(tRexChestAngle, 0, 0, 1.0);
+	drawTrexChest(solid);
+
+	glPushMatrix(); // left hand
+	glTranslatef(0.1, -0.5, -0.7);
+	drawTrexHand(solid);
+	glPopMatrix();
+
+	glPushMatrix(); // right hand
+	glTranslatef(0.1, -0.5, 0.7);
+	drawTrexHand(solid);
+	glPopMatrix();
+
+	glPushMatrix(); // neckle
+	glTranslatef(0.5, 0.1, 0.0);
+	glRotatef(tRexNeckleAngle, 0, 0, 1);
+	drawTrexNeckle(solid);
+
+	glPushMatrix(); // head
+	glTranslatef(0.6, 0.0, 0.0);
+	drawTrexHead(solid);
+	glPopMatrix();
+
+	glPopMatrix();
+
+}
+
+void drawTrexBackwardBody(char solid)
+{
+	float width = 1.5f, height = 1.5f, depth = 1.5f;
+	for (unsigned char i = 0; i < 5; i++)
+	{
+		glPushMatrix();
+		if (i < 3)
+		{
+			width += 0.1;
+		}
+		else
+		{
+			width += 0.25;
+			height -= 0.05;
+		}
+		height -= 0.2;
+		depth -= 0.2;
+		glRotatef(tRexTailAngleZ, 0, 0, 1);
+		glRotatef(tRexTailAnngleY, 0, 1, 0);
+		glTranslatef(-width / 2, 0.0, 0.0);
+		Box(width, height, depth, solid);
+	}
+	glTranslatef(width / 2, 0.0, 0.0);
+	for (unsigned char i = 0; i < 5; i++)
+	{
+		glPopMatrix();
+	}
+}
+
+void drawTrex(char solid)
+{
+	glTranslatef(0.0, tRexShake, 0.0);
+
+	SetMaterial(mat_specular4, mat_ambient4, mat_diffuse4, mat_shininess4);
+	glColor3f(0.65, 0.3, 0.16);
+
+	glRotatef(15, 0, 0, 1);
+	Box(2.0, 1.5, 1.5, solid);
+
+	glPushMatrix();
+	glTranslatef(-0.3, -0.7, -0.9);
+	drawTrexLeg(solid, true);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(-0.3, -0.7, 0.9);
+	drawTrexLeg(solid, false);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(0.7, 0.0, 0.0);
+	glRotatef(tRexChestAngle, 0, 0, 1.0);
+	drawTrexUpperBody(solid);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(-1.0, 0.0, 0.0);
+	drawTrexBackwardBody(solid);
+	glPopMatrix();
+
+}
+
 void display()
 {
 	float solid = solid_part;
@@ -381,7 +637,7 @@ void display()
 
 	// set camera
 	glLoadIdentity();
-	gluLookAt(0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 0.0f, 1.0f, 0.0f);
+	gluLookAt(xr, yr, 10.0, 0.0, 0.0, 0.0, 0.0f, 1.0f, 0.0f);
 
 	if (solid) {
 		glPushMatrix();
@@ -399,8 +655,106 @@ void display()
 	drawCat(solid);
 	glPopMatrix();
 
+	glPushMatrix();
+	glTranslatef(3.0f, 0.0f, 0.0f);
+	glRotatef(180.0f, 0.0f, 1.0f, 0.0f);
+	drawTrex(solid);
+	glPopMatrix();
+
 	glFlush();
 	glutSwapBuffers();
+}
+
+void tRexTailAnimation()
+{
+	if (reverseAnimTrex)
+	{
+		tRexTailAnngleY += tRexTailYRate;
+	}
+	else
+	{
+		tRexTailAnngleY += tRexTailYRate;
+	}
+}
+
+void tRexBiteAnimation()
+{
+	if (animTrexreverseJaw)
+	{
+		tRexJawAngle += tRexJawRate;
+	}
+	else
+	{
+		tRexJawAngle -= tRexJawRate;
+	}
+
+}
+
+void tRexWalkAnimation()
+{
+	if (reverseAnimTrex)
+	{
+		tRexLeftUpperLegAngle += tRexUpperLegRate;
+		tRexRightUpperLegAngle -= tRexUpperLegRate;
+		tRexRightLowerLegAngle -= tRexLowerLegRate;
+		tRexLeftLowerLegAngle += tRexLowerLegRate;
+	}
+	else
+	{
+		tRexLeftUpperLegAngle -= tRexUpperLegRate;
+		tRexRightUpperLegAngle += tRexUpperLegRate;
+		tRexRightLowerLegAngle += tRexLowerLegRate;
+		tRexLeftLowerLegAngle -= tRexLowerLegRate;
+	}
+
+	if (animReverseTrexShake)
+	{
+		tRexShake += (2 * tRexShakeRate);
+	}
+	else
+	{
+		tRexShake -= (2 * tRexShakeRate);
+	}
+
+}
+
+void updateStatusTrex()
+{
+	if (tRexJawAngle >= MAX_TREX_JAW_ANGLE)
+	{
+		animTrexreverseJaw = false;
+	}
+	else if (tRexJawAngle <= MIN_TREX_JAW_ANGLE)
+	{
+		animTrexreverseJaw = true;
+	}
+
+	if (tRexShake >= MAX_TREX_SHAKE)
+	{
+		animReverseTrexShake = false;
+	}
+	else if (tRexShake <= MIN_TREX_SHAKE)
+	{
+		animReverseTrexShake = true;
+	}
+
+	if (tRexLeftUpperLegAngle >= MAX_TREX_UPPER_LEG_ANGLE)
+	{
+		reverseAnimTrex = false;
+	}
+	else if (tRexLeftUpperLegAngle <= MIN_TREX_UPPER_LEG_ANGLE)
+	{
+		reverseAnimTrex = true;
+	}
+
+}
+
+void tRexAnimation()
+{
+	tRexBiteAnimation();
+	tRexWalkAnimation();
+	
+	updateStatusTrex();
 }
 
 void catAnimation()
@@ -434,6 +788,7 @@ void catAnimation()
 void animation()
 {
 	catAnimation();
+	tRexAnimation();
 
 	glutPostRedisplay();
 }
@@ -454,18 +809,20 @@ void mySpecialKey(int key, int k, int l)
 	switch (key)
 	{
 	case GLUT_KEY_UP:
-		zr += 1;
+		yt += 0.1;
 		break;
 	case GLUT_KEY_RIGHT:
-		yr += 1;
+		xt += 0.1;
 		break;
 	case GLUT_KEY_DOWN:
-		zr -= 1;
+		yt -= 0.1;
 		break;
 	case GLUT_KEY_LEFT:
-		yr -= 1;
+		xt -= 0.1;
 		break;
 	}
+
+	cout << xt << "\n";
 
 	glutPostRedisplay();
 }
